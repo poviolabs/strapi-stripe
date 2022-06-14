@@ -55,6 +55,15 @@ module.exports = {
       required: true,
       configurable: false,
     },
+    productType: {
+      type: "enumeration",
+      enum: [
+        "payment",
+        "subscription"
+      ],
+      default: "payment",
+      required: true
+    },
     stripeProductId: {
       type: "string",
       min: 3,

@@ -75,7 +75,7 @@ module.exports = ({ strapi }) => ({
       });
     return updateProductResponse;
   },
-  async createCheckoutSession(stripePriceId, productId, productName) {
+  async createCheckoutSession(stripePriceId, productId, productName, productType = "payment") {
     const pluginStore = strapi.store({
       environment: strapi.config.environment,
       type: "plugin",
@@ -96,7 +96,7 @@ module.exports = ({ strapi }) => ({
           quantity: 1,
         },
       ],
-      mode: "payment",
+      mode: productType,
       success_url: `${stripeSettings.checkoutSuccessUrl}?sessionId={CHECKOUT_SESSION_ID}`,
       cancel_url: `${stripeSettings.checkoutCancelUrl}`,
       metadata: {
