@@ -41,6 +41,7 @@ function SS_ProductCheckout() {
           stripePriceId: response.stripePriceId,
           productId: response.id,
           productName: response.title,
+          productType: response.productType,
         }),
         mode: "cors",
         headers: new Headers({
