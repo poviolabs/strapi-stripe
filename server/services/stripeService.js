@@ -103,7 +103,7 @@ module.exports = ({ strapi }) => ({
       });
     return updateProductResponse;
   },
-  async createCheckoutSession(stripePriceId, stripePlanId, isSubscription, productId, productName) {
+  async createCheckoutSession(stripePriceId, stripePlanId, isSubscription, productId, productName, userId) {
     const pluginStore = strapi.store({
       environment: strapi.config.environment,
       type: 'plugin',
@@ -118,12 +118,15 @@ module.exports = ({ strapi }) => ({
     }
     let priceId;
     let paymentMode;
+    let paymentMethodTypes;
     if (isSubscription) {
       priceId = stripePlanId;
       paymentMode = 'subscription';
+      paymentMethodTypes = ['card'];
     } else {
       priceId = stripePriceId;
       paymentMode = 'payment';
+      paymentMethodTypes = ['card', 'klarna'];
     }
     const session = await stripe.checkout.sessions.create({
       line_items: [
@@ -134,12 +137,13 @@ module.exports = ({ strapi }) => ({
         },
       ],
       mode: paymentMode,
-      payment_method_types: ['card'],
+      payment_method_types: paymentMethodTypes,
       success_url: `${stripeSettings.checkoutSuccessUrl}?sessionId={CHECKOUT_SESSION_ID}`,
       cancel_url: `${stripeSettings.checkoutCancelUrl}`,
       metadata: {
         productId: `${productId}`,
         productName: `${productName}`,
+        userId: `${userId}`,
       },
     });
     return session;
