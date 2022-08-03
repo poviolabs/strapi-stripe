@@ -65,13 +65,13 @@ module.exports = {
   },
 
   async createCheckoutSession(ctx) {
-    const { stripePriceId, stripePlanId, isSubscription, productId, productName } =
+    const { stripePriceId, stripePlanId, isSubscription, productId, productName, userId } =
       ctx.request.body;
 
     const checkoutSessionResponse = await strapi
       .plugin('strapi-stripe')
       .service('stripeService')
-      .createCheckoutSession(stripePriceId, stripePlanId, isSubscription, productId, productName);
+      .createCheckoutSession(stripePriceId, stripePlanId, isSubscription, productId, productName, userId);
     ctx.send(checkoutSessionResponse, 200);
   },
   async retrieveCheckoutSession(ctx) {
