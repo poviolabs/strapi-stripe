@@ -138,6 +138,7 @@ module.exports = ({ strapi }) => ({
       ],
       mode: paymentMode,
       payment_method_types: paymentMethodTypes,
+      allow_promotion_codes: true,
       success_url: `${stripeSettings.checkoutSuccessUrl}?sessionId={CHECKOUT_SESSION_ID}`,
       cancel_url: `${stripeSettings.checkoutCancelUrl}`,
       metadata: {
