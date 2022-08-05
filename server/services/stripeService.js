@@ -116,15 +116,12 @@ module.exports = ({ strapi }) => ({
     } else {
       stripe = new Stripe(stripeSettings.stripeTestSecKey);
     }
-    let priceId;
     let paymentMode;
     let paymentMethodTypes;
     if (isSubscription) {
-      priceId = stripePlanId;
       paymentMode = 'subscription';
       paymentMethodTypes = ['card'];
     } else {
-      priceId = stripePriceId;
       paymentMode = 'payment';
       paymentMethodTypes = ['card', 'klarna'];
     }
@@ -132,7 +129,7 @@ module.exports = ({ strapi }) => ({
       line_items: [
         {
           // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-          price: priceId,
+          price: stripePriceId,
           quantity: 1,
         },
       ],
