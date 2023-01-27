@@ -1,13 +1,14 @@
 {
   "name": "strapi-stripe",
-  "version": "2.1.2",
-  "description": "Online payments and subscriptions made simple, secure and fast.This free plugin enables you to accept online payments and create subscriptions using Credit Card, Apple pay and Google pay on your Strapi app via Stripe.",
+  "version": "3.2.0",
+  "description": "Online payments and subscriptions made simple, secure and fast. This free plugin enables you to accept online payments and create subscriptions using Credit Card, Apple pay, Google pay, SEPA Direct Debit, ACH Direct Debit on your Strapi app via Stripe.",
   "strapi": {
     "name": "strapi-stripe",
-    "description": "Online payments made simple, secure and fast. This free plugin enables you to accept online payments using Credit Card, Apple pay and Google pay on your Strapi website or app via Stripe.",
+    "description": "Online payments and subscriptions made simple, secure and fast. This free plugin enables you to accept online payments and create subscriptions using Credit Card, Apple pay, Google pay, SEPA Direct Debit, ACH Direct Debit on your Strapi app via Stripe.",
     "kind": "plugin"
   },
   "dependencies": {
+    "better-sqlite3": "^7.6.2",
     "html-react-parser": "^1.4.10",
     "stripe": "^8.210.0"
   },
@@ -72,7 +73,7 @@
     }
   ],
   "engines": {
-    "node": ">=12.x.x <=16.x.x",
+    "node": ">=14.19.1 <=18.x.x",
     "npm": ">=6.0.0"
   },
   "keywords": [
@@ -84,8 +85,13 @@
     "charge",
     "intent",
     "merchant",
-    "credit",
-    "debit",
+    "credit card",
+    "debit card",
+    "ACH Direct Debit",
+    "SEPA Direct Debit",
+    "AliPay",
+    "Klarna",
+    "iDEAL",
     "card pay",
     "google pay",
     "secure payment",

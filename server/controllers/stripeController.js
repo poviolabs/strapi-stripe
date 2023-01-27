@@ -2,20 +2,8 @@
 
 module.exports = {
   async createProduct(ctx) {
-    const {
-      title,
-      price,
-      imageId,
-      imageUrl,
-      description,
-      isSubscription,
-      paymentInterval,
-      trialPeriodDays,
-    } = ctx.request.body;
-    const stripeProductResponse = await strapi
-      .plugin('strapi-stripe')
-      .service('stripeService')
-      .createProduct(
+    try {
+      const {
         title,
         price,
         imageId,
@@ -23,9 +11,28 @@ module.exports = {
         description,
         isSubscription,
         paymentInterval,
-        trialPeriodDays
-      );
-    ctx.send(stripeProductResponse, 200);
+        trialPeriodDays,
+      } = ctx.request.body;
+      const stripeProductResponse = await strapi
+        .plugin('strapi-stripe')
+        .service('stripeService')
+        .createProduct(
+          title,
+          price,
+          imageId,
+          imageUrl,
+          description,
+          isSubscription,
+          paymentInterval,
+          trialPeriodDays
+        );
+      ctx.send(stripeProductResponse, 200);
+    } catch (error) {
+      return {
+        status: 500,
+        message: error.message,
+      };
+    }
   },
   async find(ctx) {
     const { offset, limit, sort, order } = ctx.params;
@@ -35,9 +42,9 @@ module.exports = {
     } else if (sort === 'price') {
       needToshort = { price: `${order}` };
     }
-    const count = await strapi.query('plugin::strapi-stripe.strapi-stripe-product').count();
+    const count = await strapi.query('plugin::strapi-stripe.ss-product').count();
 
-    const res = await strapi.query('plugin::strapi-stripe.strapi-stripe-product').findMany({
+    const res = await strapi.query('plugin::strapi-stripe.ss-product').findMany({
       orderBy: needToshort,
       offset,
       limit,
@@ -50,7 +57,7 @@ module.exports = {
   async findOne(ctx) {
     const { id } = ctx.params;
     const res = await strapi
-      .query('plugin::strapi-stripe.strapi-stripe-product')
+      .query('plugin::strapi-stripe.ss-product')
       .findOne({ where: { id }, populate: true });
     ctx.body = res;
   },
@@ -65,13 +72,28 @@ module.exports = {
   },
 
   async createCheckoutSession(ctx) {
-    const { stripePriceId, stripePlanId, isSubscription, productId, productName, userId } =
-      ctx.request.body;
+    const {
+      stripePriceId,
+      stripePlanId,
+      isSubscription,
+      productId,
+      productName,
+      userEmail,
+      userId,
+    } = ctx.request.body;
 
     const checkoutSessionResponse = await strapi
       .plugin('strapi-stripe')
       .service('stripeService')
-      .createCheckoutSession(stripePriceId, stripePlanId, isSubscription, productId, productName, userId);
+      .createCheckoutSession(
+        stripePriceId,
+        stripePlanId,
+        isSubscription,
+        productId,
+        productName,
+        userEmail,
+        userId
+      );
     ctx.send(checkoutSessionResponse, 200);
   },
   async retrieveCheckoutSession(ctx) {
@@ -95,22 +117,20 @@ module.exports = {
       stripeProduct,
     } = ctx.request.body;
 
-    const savePaymentDetails = await strapi
-      .query('plugin::strapi-stripe.strapi-stripe-payment')
-      .create({
-        data: {
-          txnDate,
-          transactionId,
-          isTxnSuccessful,
-          txnMessage: JSON.stringify(txnMessage),
-          txnAmount,
-          customerName,
-          customerEmail,
-          stripeProduct,
-        },
-        populate: true,
-      });
-
+    const savePaymentDetails = await strapi.query('plugin::strapi-stripe.ss-payment').create({
+      data: {
+        txnDate,
+        transactionId,
+        isTxnSuccessful,
+        txnMessage: JSON.stringify(txnMessage),
+        txnAmount,
+        customerName,
+        customerEmail,
+        stripeProduct,
+      },
+      populate: true,
+    });
+    await strapi.plugin('strapi-stripe').service('stripeService').sendDataToCallbackUrl(txnMessage);
     return savePaymentDetails;
   },
   async getProductPayments(ctx) {
@@ -123,11 +143,11 @@ module.exports = {
     } else if (sort === 'date') {
       needToshort = { txnDate: `${order}` };
     }
-    const count = await strapi.query('plugin::strapi-stripe.strapi-stripe-payment').count({
+    const count = await strapi.query('plugin::strapi-stripe.ss-payment').count({
       where: { stripeProduct: id },
     });
 
-    const payments = await strapi.query('plugin::strapi-stripe.strapi-stripe-payment').findMany({
+    const payments = await strapi.query('plugin::strapi-stripe.ss-payment').findMany({
       where: { stripeProduct: id },
       orderBy: needToshort,
       offset,
@@ -135,5 +155,19 @@ module.exports = {
       populate: true,
     });
     return { payments, count };
+  },
+  async searchSubscriptionStatus(ctx) {
+    const { email } = ctx.params;
+
+    const subscriptionStatus = await strapi
+      .plugin('strapi-stripe')
+      .service('stripeService')
+      .searchSubscriptionStatus(email);
+
+    if (subscriptionStatus) {
+      ctx.send(subscriptionStatus, 200);
+    } else {
+      ctx.send(subscriptionStatus, 204);
+    }
   },
 };

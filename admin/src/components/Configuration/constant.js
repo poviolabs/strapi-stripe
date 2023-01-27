@@ -66,6 +66,14 @@ const currencies = [
     value: 'cop',
   },
   {
+    label: 'CNY - Chinese Yuan',
+    value: 'cny',
+  },
+  {
+    label: 'DKK - Danish Krone',
+    value: 'dkk',
+  },
+  {
     label: 'EGP - Egyptian Pound',
     value: 'egp',
   },
@@ -162,8 +170,24 @@ const currencies = [
     value: 'sek',
   },
   {
+    label: 'RON - Romania New Leu',
+    value: 'ron',
+  },
+  {
     label: 'THB - Thai Baht',
     value: 'thb',
+  },
+  {
+    label: 'TWD - Taiwan New Dollar',
+    value: 'twd',
+  },
+  {
+    label: 'TRL - Turkey Lira',
+    value: 'trl',
+  },
+  {
+    label: 'UAH - Ukraine Hryvna',
+    value: 'uah',
   },
   {
     label: 'VND - Viet Nam Dong',

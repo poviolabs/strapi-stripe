@@ -3,13 +3,18 @@
 
 window.onload = () => {
   // for product Checkout
-  const ssProduct = document.getElementById('SS_ProductCheckout');
+  const ssProduct = document.querySelectorAll('.SS_ProductCheckout');
   if (ssProduct) {
-    ssProduct.addEventListener('click', () => {
-      SS_ProductCheckout();
+    ssProduct.forEach(product => {
+      product.addEventListener('click', function handleClick(event) {
+        SS_ProductCheckout(
+          event.target.dataset.id,
+          event.target.dataset.url,
+          event.target.dataset.email
+        );
+      });
     });
   }
-
   // for storing product payment order in strapi
   const params = new URLSearchParams(document.location.search);
   const checkoutSessionId = params.get('sessionId');
@@ -20,11 +25,7 @@ window.onload = () => {
 
 // product Checkout logic
 
-function SS_ProductCheckout() {
-  const strapiStripe = document.querySelector('#SS_ProductCheckout');
-  const productId = strapiStripe.dataset.id;
-
-  const baseUrl = strapiStripe.dataset.url;
+function SS_ProductCheckout(productId, baseUrl, userEmail) {
   localStorage.setItem('strapiStripeUrl', baseUrl);
   const getProductApi = baseUrl + '/strapi-stripe/getProduct/' + productId;
   const checkoutSessionUrl = baseUrl + '/strapi-stripe/createCheckoutSession/';
@@ -46,6 +47,7 @@ function SS_ProductCheckout() {
           isSubscription: response.isSubscription,
           productId: response.id,
           productName: response.title,
+          userEmail,
         }),
         mode: 'cors',
         headers: new Headers({
