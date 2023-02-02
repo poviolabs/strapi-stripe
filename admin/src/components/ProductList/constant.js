@@ -1,3 +1,6 @@
+export const supportEmail = {
+  email: 'support@higheredlab.com',
+};
 export const stripeResponse = {
   id: 'cs_test_a1V6WMk1RmA0JKhI2vlMIrJrINvFWq62hgUnuyYbyxuBr2twbsMA4TXXDD',
   object: 'checkout.session',
@@ -83,6 +86,11 @@ export const currencies = [
     currency: 'Albania Lek',
     abbreviation: 'ALL',
     symbol: '&#76;&#101;&#107;',
+  },
+  {
+    currency: 'United Arab Emirates Dirham',
+    abbreviation: 'AED',
+    symbol: '&#x62f;&#x2e;&#x625;',
   },
   {
     currency: 'Afghanistan Afghani',

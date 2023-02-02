@@ -6,7 +6,7 @@ module.exports = [
     path: '/updateSettings',
     handler: 'configurationController.updateSetting',
     config: {
-      auth: false,
+      policies: ['admin::isAuthenticatedAdmin'],
     },
   },
   {
@@ -14,7 +14,7 @@ module.exports = [
     path: '/getSettings',
     handler: 'configurationController.getSetting',
     config: {
-      auth: false,
+      policies: ['admin::isAuthenticatedAdmin'],
     },
   },
   {
@@ -79,6 +79,14 @@ module.exports = [
     method: 'GET',
     path: '/getPayments/:id/:sort/:order/:offset/:limit',
     handler: 'stripeController.getProductPayments',
+    config: {
+      auth: false,
+    },
+  },
+  {
+    method: 'GET',
+    path: '/getSubscriptionStatus/:email',
+    handler: 'stripeController.searchSubscriptionStatus',
     config: {
       auth: false,
     },

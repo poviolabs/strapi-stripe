@@ -1,8 +1,23 @@
+/* eslint-disable node/no-extraneous-require */
+/* eslint-disable node/no-missing-require */
+
 'use strict';
 
 const Stripe = require('stripe');
+const { ApplicationError } = require('@strapi/utils').errors;
+const axiosInstance = require('axios');
 
 module.exports = ({ strapi }) => ({
+  async initialize() {
+    const pluginStore = strapi.store({
+      environment: strapi.config.environment,
+      type: 'plugin',
+      name: 'strapi-stripe',
+    });
+    const settings = await pluginStore.get({ key: 'stripeSetting' });
+    return settings;
+  },
+
   async createProduct(
     title,
     productPrice,
@@ -13,87 +28,81 @@ module.exports = ({ strapi }) => ({
     paymentInterval,
     trialPeriodDays
   ) {
-    const pluginStore = strapi.store({
-      environment: strapi.config.environment,
-      type: 'plugin',
-      name: 'strapi-stripe',
-    });
+    try {
+      const stripeSettings = await this.initialize();
+      let stripe;
 
-    const stripeSettings = await pluginStore.get({ key: 'stripeSetting' });
-    let stripe;
-    if (stripeSettings.isLiveMode) {
-      stripe = new Stripe(stripeSettings.stripeLiveSecKey);
-    } else {
-      stripe = new Stripe(stripeSettings.stripeTestSecKey);
-    }
+      if (stripeSettings.isLiveMode) {
+        stripe = new Stripe(stripeSettings.stripeLiveSecKey);
+      } else {
+        stripe = new Stripe(stripeSettings.stripeTestSecKey);
+      }
 
-    const product = await stripe.products.create({
-      name: title,
-      description,
-      images: [imageUrl],
-    });
+      const product = await stripe.products.create({
+        name: title,
+        description,
+        images: [imageUrl],
+      });
 
-    const createproduct = async (productId, priceId, planId) => {
-      const create = await strapi.query('plugin::strapi-stripe.strapi-stripe-product').create({
-        data: {
-          title,
-          description,
-          price: productPrice,
+      const createproduct = async (productId, priceId, planId) => {
+        const create = await strapi.query('plugin::strapi-stripe.ss-product').create({
+          data: {
+            title,
+            description,
+            price: productPrice,
+            currency: stripeSettings.currency,
+            productImage: imageId,
+            isSubscription,
+            interval: paymentInterval,
+            trialPeriodDays,
+            stripeProductId: productId,
+            stripePriceId: priceId,
+            stripePlanId: planId,
+          },
+          populate: true,
+        });
+        return create;
+      };
+
+      if (isSubscription) {
+        const plan = await stripe.plans.create({
+          amount: Math.round(productPrice * 100),
           currency: stripeSettings.currency,
-          productImage: imageId,
-          isSubscription,
           interval: paymentInterval,
-          trialPeriodDays,
-          stripeProductId: productId,
-          stripePriceId: priceId,
-          stripePlanId: planId,
-        },
-        populate: true,
-      });
-      return create;
-    };
-
-    if (isSubscription) {
-      const plan = await stripe.plans.create({
-        amount: productPrice * 100,
-        currency: stripeSettings.currency,
-        interval: paymentInterval,
-        product: product.id,
-        trial_period_days: trialPeriodDays,
-      });
-      createproduct(product.id, '', plan.id);
-    } else {
-      const price = await stripe.prices.create({
-        unit_amount: productPrice * 100,
-        currency: stripeSettings.currency,
-        product: product.id,
-      });
-      createproduct(product.id, price.id, '');
+          product: product.id,
+          trial_period_days: trialPeriodDays ? trialPeriodDays : 0,
+        });
+        createproduct(product.id, '', plan.id);
+      } else {
+        const price = await stripe.prices.create({
+          unit_amount: Math.round(productPrice * 100),
+          currency: stripeSettings.currency,
+          product: product.id,
+        });
+        createproduct(product.id, price.id, '');
+      }
+      return product;
+    } catch (error) {
+      console.log(error);
+      throw new ApplicationError(error.message);
     }
-    return product;
   },
   async updateProduct(id, title, url, description, productImage, stripeProductId) {
-    const pluginStore = strapi.store({
-      environment: strapi.config.environment,
-      type: 'plugin',
-      name: 'strapi-stripe',
-    });
-    const stripeSettings = await pluginStore.get({ key: 'stripeSetting' });
-    let stripe;
-    if (stripeSettings.isLiveMode) {
-      stripe = new Stripe(stripeSettings.stripeLiveSecKey);
-    } else {
-      stripe = new Stripe(stripeSettings.stripeTestSecKey);
-    }
+    try {
+      const stripeSettings = await this.initialize();
+      let stripe;
+      if (stripeSettings.isLiveMode) {
+        stripe = new Stripe(stripeSettings.stripeLiveSecKey);
+      } else {
+        stripe = new Stripe(stripeSettings.stripeTestSecKey);
+      }
 
-    await stripe.products.update(stripeProductId, {
-      name: title,
-      description,
-      images: [url],
-    });
-    const updateProductResponse = await strapi
-      .query('plugin::strapi-stripe.strapi-stripe-product')
-      .update({
+      await stripe.products.update(stripeProductId, {
+        name: title,
+        description,
+        images: [url],
+      });
+      const updateProductResponse = await strapi.query('plugin::strapi-stripe.ss-product').update({
         where: { id },
         data: {
           title,
@@ -101,65 +110,115 @@ module.exports = ({ strapi }) => ({
           productImage,
         },
       });
-    return updateProductResponse;
+      return updateProductResponse;
+    } catch (error) {
+      console.log(error);
+      throw new ApplicationError(error.message);
+    }
   },
-  async createCheckoutSession(stripePriceId, stripePlanId, isSubscription, productId, productName, userId) {
-    const pluginStore = strapi.store({
-      environment: strapi.config.environment,
-      type: 'plugin',
-      name: 'strapi-stripe',
-    });
-    const stripeSettings = await pluginStore.get({ key: 'stripeSetting' });
-    let stripe;
-    if (stripeSettings.isLiveMode) {
-      stripe = new Stripe(stripeSettings.stripeLiveSecKey);
-    } else {
-      stripe = new Stripe(stripeSettings.stripeTestSecKey);
-    }
-    let paymentMode;
-    let paymentMethodTypes;
-    if (isSubscription) {
-      paymentMode = 'subscription';
-      paymentMethodTypes = ['card'];
-    } else {
-      paymentMode = 'payment';
-      paymentMethodTypes = ['card', 'klarna'];
-    }
-    const session = await stripe.checkout.sessions.create({
-      line_items: [
-        {
-          // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-          price: stripePriceId,
-          quantity: 1,
+  async createCheckoutSession(
+    stripePriceId,
+    stripePlanId,
+    isSubscription,
+    productId,
+    productName,
+    userEmail,
+    userId
+  ) {
+    try {
+      const stripeSettings = await this.initialize();
+      let stripe;
+      if (stripeSettings.isLiveMode) {
+        stripe = new Stripe(stripeSettings.stripeLiveSecKey);
+      } else {
+        stripe = new Stripe(stripeSettings.stripeTestSecKey);
+      }
+      let priceId;
+      let paymentMode;
+      if (isSubscription) {
+        priceId = stripePriceId;
+        paymentMode = 'subscription';
+      } else {
+        priceId = stripePriceId;
+        paymentMode = 'payment';
+      }
+
+      const price = await stripe.prices.retrieve(priceId);
+      //payment Methods
+      const PaymentMethods = await strapi
+        .plugin('strapi-stripe')
+        .service('paymentMethodService')
+        .getPaymentMethods(isSubscription, price.currency, stripeSettings.paymentMethods);
+
+      // Create Checkout Sessions.
+      const session = await stripe.checkout.sessions.create({
+        line_items: [
+          {
+            // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        mode: paymentMode,
+        payment_method_types: [...PaymentMethods],
+        customer_email: userEmail,
+        allow_promotion_codes: true,
+        success_url: `${stripeSettings.checkoutSuccessUrl}?sessionId={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${stripeSettings.checkoutCancelUrl}`,
+        metadata: {
+          productId: `${productId}`,
+          productName: `${productName}`,
+          userId: `${userId}`,
         },
-      ],
-      mode: paymentMode,
-      payment_method_types: paymentMethodTypes,
-      allow_promotion_codes: true,
-      success_url: `${stripeSettings.checkoutSuccessUrl}?sessionId={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${stripeSettings.checkoutCancelUrl}`,
-      metadata: {
-        productId: `${productId}`,
-        productName: `${productName}`,
-        userId: `${userId}`,
-      },
-    });
-    return session;
+      });
+      return session;
+    } catch (error) {
+      throw new ApplicationError(error.message);
+    }
   },
   async retrieveCheckoutSession(checkoutSessionId) {
-    const pluginStore = strapi.store({
-      environment: strapi.config.environment,
-      type: 'plugin',
-      name: 'strapi-stripe',
-    });
-    const stripeSettings = await pluginStore.get({ key: 'stripeSetting' });
-    let stripe;
-    if (stripeSettings.isLiveMode) {
-      stripe = new Stripe(stripeSettings.stripeLiveSecKey);
-    } else {
-      stripe = new Stripe(stripeSettings.stripeTestSecKey);
+    try {
+      const stripeSettings = await this.initialize();
+      let stripe;
+      if (stripeSettings.isLiveMode) {
+        stripe = new Stripe(stripeSettings.stripeLiveSecKey);
+      } else {
+        stripe = new Stripe(stripeSettings.stripeTestSecKey);
+      }
+      const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+      return session;
+    } catch (error) {
+      throw new ApplicationError(error.message);
     }
-    const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
-    return session;
+  },
+  async sendDataToCallbackUrl(session) {
+    try {
+      const stripeSettings = await this.initialize();
+      await axiosInstance.post(stripeSettings.callbackUrl, session);
+    } catch (error) {
+      throw new ApplicationError(error.message);
+    }
+  },
+
+  // search subscription status by customer email
+  async searchSubscriptionStatus(email) {
+    try {
+      const stripeSettings = await this.initialize();
+      let stripe;
+      if (stripeSettings.isLiveMode) {
+        stripe = new Stripe(stripeSettings.stripeLiveSecKey);
+      } else {
+        stripe = new Stripe(stripeSettings.stripeTestSecKey);
+      }
+      const customer = await stripe.customers.list({ email });
+
+      if (customer.data.length === 0) return null;
+      const subscription = await stripe.subscriptions.list({ customer: customer.data[0].id });
+      if (subscription.data.length === 0) return null;
+
+      return subscription;
+    } catch (error) {
+      throw new ApplicationError(error.message);
+    }
   },
 });

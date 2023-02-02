@@ -22,7 +22,15 @@ import { Link } from '@strapi/design-system/Link';
 import { Switch } from '@strapi/design-system/Switch';
 import { Flex } from '@strapi/design-system/Flex';
 import currencies from './constant';
-import { saveStripeConfiguration, getStripeConfiguration } from '../../utils/apiCalls';
+import { supportEmail } from '../ProductList/constant';
+import {
+  saveStripeConfiguration,
+  getStripeConfiguration,
+  getGithubVersion,
+} from '../../utils/apiCalls';
+import Banner from './banner';
+import pluginPkg from '../../../../package.json';
+import WarningIcon from './warningIcon';
 
 const Configuration = () => {
   const [stripeConfiguration, setStripeConfiguration] = useState({
@@ -34,6 +42,8 @@ const Configuration = () => {
     checkoutSuccessUrl: '',
     checkoutCancelUrl: '',
     currency: undefined,
+    callbackUrl: '',
+    paymentMethods: ['card'],
   });
 
   const [showAlert, setShowAlert] = useState(false);
@@ -49,6 +59,8 @@ const Configuration = () => {
     currency: '',
   });
 
+  const [isNewVersionAvailable, setIsNewVersionAvailable] = useState(false);
+
   useEffect(() => {
     (async () => {
       const response = await getStripeConfiguration();
@@ -63,6 +75,8 @@ const Configuration = () => {
           checkoutSuccessUrl,
           checkoutCancelUrl,
           currency,
+          callbackUrl,
+          paymentMethods,
         } = response.data.response;
         setStripeConfiguration({
           ...stripeConfiguration,
@@ -74,7 +88,16 @@ const Configuration = () => {
           checkoutSuccessUrl,
           checkoutCancelUrl,
           currency,
+          callbackUrl,
+          paymentMethods,
         });
+      }
+      // call github api to get the latest version of the plugin
+      const data = await getGithubVersion();
+
+      // compare the latest version with the current version
+      if (data.tag_name > pluginPkg.version) {
+        setIsNewVersionAvailable(true);
       }
     })();
   }, []);
@@ -212,6 +235,34 @@ const Configuration = () => {
           ) : (
             ''
           )}
+        </Box>
+
+        <Box paddingBottom={4}>
+          <Banner
+            leftChild={
+              <img
+                src="https://higheredlab.com/wp-content/uploads/hel_icon.png"
+                alt="hel-logo"
+                height={35}
+                width={40}
+              />
+            }
+            rightChild={
+              <Typography variant="omega">
+                Facing technical issues?{' '}
+                <a
+                  href="https://github.com/manishkatyan/strapi-stripe/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Raise an issue on Github
+                </a>
+                &nbsp;or email at {supportEmail.email}
+              </Typography>
+            }
+            leftChildCol={2}
+            rightChildCol={10}
+          />
         </Box>
         <Box
           shadow="tableShadow"
@@ -380,61 +431,119 @@ const Configuration = () => {
                   </Select>
                 </Box>
               </GridItem>
-            </Grid>
-          </Box>
-        </Box>
-        <br />
-        <Box
-          shadow="tableShadow"
-          background="neutral0"
-          paddingTop={6}
-          paddingLeft={7}
-          paddingRight={7}
-          paddingBottom={6}
-          hasRadius
-        >
-          <Box paddingBottom={2}>
-            <Typography variant="delta">Email Settings</Typography>
-          </Box>
-
-          <Box paddingTop={2}>
-            <Grid gap={4}>
               <GridItem col={6} s={12}>
-                <Link
-                  href="https://support.stripe.com/questions/set-up-account-email-notifications"
-                  isExternal
+                <Box paddingBottom={2}>
+                  <TextInput
+                    name="callbackUrl"
+                    label="Webhook URL"
+                    value={stripeConfiguration.callbackUrl}
+                    onChange={handleChange}
+                    hint="The response from Stripe will be posted to this URL."
+                  />
+                </Box>
+              </GridItem>
+              <GridItem col={6} s={12}>
+                <Select
+                  id="paymentMethod"
+                  label="Choose Payment Methods"
+                  onClear={() =>
+                    setStripeConfiguration({ ...stripeConfiguration, paymentMethods: [] })
+                  }
+                  value={
+                    stripeConfiguration.paymentMethods ? stripeConfiguration.paymentMethods : []
+                  }
+                  onChange={values =>
+                    setStripeConfiguration({ ...stripeConfiguration, paymentMethods: values })
+                  }
+                  multi
+                  withTags
                 >
-                  Setup seller notification
-                </Link>
-              </GridItem>
-              <GridItem col={6} s={12}>
-                <Link href=" https://stripe.com/docs/receipts" isExternal>
-                  Setup buyer notification
-                </Link>
+                  <Option value="card">Credit Card/Debit Card</Option>
+                  <Option value="sepa_debit"> SEPA Direct Debit</Option>
+                  <Option value="us_bank_account">ACH Direct Debit</Option>
+                  <Option value="alipay">Alipay</Option>
+                  <Option value="klarna">Klarna</Option>
+                  <Option value="ideal">iDEAL</Option>
+                  <Option value="sofort">SOFORT</Option>
+                </Select>
               </GridItem>
             </Grid>
           </Box>
         </Box>
         <br />
-        <Box
-          shadow="tableShadow"
-          background="neutral0"
-          paddingTop={6}
-          paddingLeft={7}
-          paddingRight={7}
-          paddingBottom={6}
-          hasRadius
-        >
-          <Box paddingTop={2}>
-            <Grid gap={4}>
-              <GridItem col={6} s={12}>
-                <Typography variant="pi">
-                  Need help? Contact us at : support@higheredlab.com
+
+        <Banner
+          leftChild={
+            <Link
+              href="https://support.stripe.com/questions/set-up-account-email-notifications"
+              isExternal
+            >
+              Setup seller notification
+            </Link>
+          }
+          rightChild={
+            <Link href=" https://stripe.com/docs/receipts" isExternal>
+              Setup buyer notification
+            </Link>
+          }
+          rightChildCol={6}
+          leftChildCol={6}
+          header="Email Settings"
+          isHeader
+        />
+
+        <br />
+        {isNewVersionAvailable ? (
+          <>
+            <Banner
+              leftChild={<WarningIcon />}
+              rightChild={
+                <Typography variant="omega">
+                  {' '}
+                  A new version is available{' '}
+                  <a
+                    href="https://www.npmjs.com/package/strapi-stripe"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    click here
+                  </a>{' '}
+                  to know more.{' '}
                 </Typography>
-              </GridItem>
-            </Grid>
-          </Box>
-        </Box>
+              }
+              leftChildCol={2}
+              rightChildCol={10}
+            />
+
+            <br />
+          </>
+        ) : null}
+
+        <Banner
+          leftChild={
+            <img
+              src="https://res.cloudinary.com/dvotpztje/image/upload/v1671441868/paypal-logo_tifrf5.webp"
+              alt="paypal"
+              height={25}
+              width={80}
+            />
+          }
+          rightChild={
+            <Typography variant="omega">
+              Want to use Paypal?{' '}
+              <a
+                href="https://market.strapi.io/plugins/strapi-paypal"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download our free plugin
+              </a>
+              .
+            </Typography>
+          }
+          leftChildCol={2}
+          rightChildCol={10}
+        />
       </ContentLayout>
     </Main>
   );

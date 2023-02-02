@@ -2,22 +2,22 @@
 
 module.exports = {
   info: {
-    tableName: 'StrapiStripeProduct',
-    singularName: 'strapi-stripe-product', // kebab-case mandatory
-    pluralName: 'strapi-stripe-products', // kebab-case mandatory
+    tableName: 'StripeProduct',
+    singularName: 'ss-product', // kebab-case mandatory
+    pluralName: 'ss-products', // kebab-case mandatory
     displayName: 'Product',
     description: 'Stripe Products',
     kind: 'collectionType',
   },
   options: {
-    draftAndPublish: 'false',
+    draftAndPublish: false,
   },
   pluginOptions: {
     'content-manager': {
-      visible: true,
+      visible: false,
     },
     'content-type-builder': {
-      visible: true,
+      visible: false,
     },
   },
   attributes: {
@@ -35,7 +35,7 @@ module.exports = {
       configurable: false,
     },
     description: {
-      type: 'string',
+      type: 'text',
       min: 1,
       required: true,
       configurable: false,
@@ -88,7 +88,7 @@ module.exports = {
     stripePayment: {
       type: 'relation',
       relation: 'oneToMany',
-      target: 'plugin::strapi-stripe.strapi-stripe-payment',
+      target: 'plugin::strapi-stripe.ss-payment',
       mappedBy: 'stripeProduct',
       configurable: false,
     },
